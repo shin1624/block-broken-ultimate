@@ -1,5 +1,6 @@
 import EventBus from "../core/EventBus.js";
 import { CANVAS, COLORS, STATES } from "../config/constants.js";
+import { POWERUP_VISUALS } from "../entities/PowerUp.js";
 
 /**
  * HUD - ヘッドアップディスプレイ
@@ -196,23 +197,72 @@ class HUD {
   }
 
   /**
-   * アクティブパワーアップ描画
+   * アクティブパワーアップ描画（アイコン + 残り時間バー）
    */
   renderActiveEffects(ctx) {
     if (this.activeEffects.length === 0) return;
 
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.font = "11px monospace";
+    const iconSize = 24;
+    const barWidth = 24;
+    const barHeight = 3;
+    const gap = 6;
+    const startX = CANVAS.WIDTH - 36;
+    const startY = 52;
 
     for (let i = 0; i < this.activeEffects.length; i++) {
       const effect = this.activeEffects[i];
-      const x = 15;
-      const y = CANVAS.HEIGHT - 20 - i * 18;
-      const secs = Math.ceil(effect.remaining / 1000);
+      const visual = POWERUP_VISUALS[effect.type];
+      if (!visual) continue;
 
-      ctx.fillStyle = "rgba(0, 255, 136, 0.7)";
-      ctx.fillText(`[${effect.type}] ${secs}s`, x, y);
+      const x = startX;
+      const y = startY + i * (iconSize + gap);
+      const ratio =
+        effect.duration > 0 ? effect.remaining / effect.duration : 1;
+
+      // アイコン背景（角丸四角）
+      ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+      ctx.beginPath();
+      const r = 4;
+      const bx = x - iconSize / 2;
+      const by = y - iconSize / 2;
+      ctx.moveTo(bx + r, by);
+      ctx.lineTo(bx + iconSize - r, by);
+      ctx.quadraticCurveTo(bx + iconSize, by, bx + iconSize, by + r);
+      ctx.lineTo(bx + iconSize, by + iconSize - r);
+      ctx.quadraticCurveTo(
+        bx + iconSize,
+        by + iconSize,
+        bx + iconSize - r,
+        by + iconSize,
+      );
+      ctx.lineTo(bx + r, by + iconSize);
+      ctx.quadraticCurveTo(bx, by + iconSize, bx, by + iconSize - r);
+      ctx.lineTo(bx, by + r);
+      ctx.quadraticCurveTo(bx, by, bx + r, by);
+      ctx.closePath();
+      ctx.fill();
+
+      // カラーボーダー
+      ctx.strokeStyle = visual.color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // アイコン文字
+      ctx.fillStyle = visual.color;
+      ctx.font = "bold 13px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(visual.icon, x, y);
+
+      // 残り時間バー（アイコン下部）
+      const barX = x - barWidth / 2;
+      const barY = y + iconSize / 2 + 2;
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+      ctx.fillRect(barX, barY, barWidth, barHeight);
+
+      ctx.fillStyle = visual.color;
+      ctx.fillRect(barX, barY, barWidth * ratio, barHeight);
     }
   }
 }

@@ -3,12 +3,8 @@ import GameLoop from "./core/GameLoop.js";
 import GameStateManager from "./core/GameStateManager.js";
 import GameEventHandler from "./core/GameEventHandler.js";
 import { CANVAS, STATES, GAME, PHYSICS } from "./config/constants.js";
-
-// Entities
 import Ball from "./entities/Ball.js";
 import Paddle from "./entities/Paddle.js";
-
-// Systems
 import CollisionSystem from "./systems/CollisionSystem.js";
 import InputSystem from "./systems/InputSystem.js";
 import TouchControlSystem from "./systems/TouchControlSystem.js";
@@ -22,8 +18,6 @@ import ScreenEffectsSystem from "./systems/ScreenEffectsSystem.js";
 import TransitionSystem from "./systems/TransitionSystem.js";
 import MusicSystem from "./systems/MusicSystem.js";
 import AudioSystem from "./systems/AudioSystem.js";
-
-// UI
 import MenuScreen from "./ui/MenuScreen.js";
 import HUD from "./ui/HUD.js";
 import PauseScreen from "./ui/PauseScreen.js";
@@ -38,6 +32,7 @@ let musicSystem, audioSystem, audioContext;
 let menuScreen, hud, pauseScreen, gameOverScreen, levelCompleteScreen;
 
 let paddle, balls, score, lives;
+let eventHandler;
 
 function initCanvas() {
   canvas = document.getElementById("game-canvas");
@@ -109,6 +104,36 @@ function initAudio() {
   if (audioContext.state === "suspended") audioContext.resume();
 }
 
+function updateLasers(dt) {
+  if (!eventHandler) return;
+  const lasers = eventHandler.getLasers();
+  const blocks = levelSystem.getBlocks();
+  for (let i = lasers.length - 1; i >= 0; i--) {
+    const laser = lasers[i];
+    laser.update(dt);
+    if (!laser.active) {
+      lasers.splice(i, 1);
+      continue;
+    }
+    const lb = laser.getBounds();
+    for (let j = 0; j < blocks.length; j++) {
+      const block = blocks[j];
+      if (block.destroyed) continue;
+      const hit =
+        lb.x < block.x + block.width &&
+        lb.x + lb.width > block.x &&
+        lb.y < block.y + block.height &&
+        lb.y + lb.height > block.y;
+      if (hit) {
+        block.hit();
+        laser.active = false;
+        lasers.splice(i, 1);
+        break;
+      }
+    }
+  }
+}
+
 function checkBallLoss() {
   const activeBalls = balls.filter((b) => b.active);
   if (activeBalls.length === 0 && balls.length > 0) {
@@ -176,7 +201,10 @@ function setupUpdateLoop() {
       inputSystem.update(dt);
       touchSystem.update(dt);
       paddle.update(dt);
-      for (let i = 0; i < balls.length; i++) balls[i].update(dt);
+      for (let i = 0; i < balls.length; i++) {
+        balls[i].updateStuck(paddle);
+        balls[i].update(dt);
+      }
       levelSystem.update(dt);
       collisionSystem.setEntities(
         balls,
@@ -189,6 +217,7 @@ function setupUpdateLoop() {
       comboSystem.update(dt);
       hud.setComboTimerRatio(comboSystem.getTimerRatio());
       hud.setActiveEffects(powerUpManager.getActiveEffects());
+      updateLasers(dt);
       checkBallLoss();
     }
     particleSystem.update(dt);
@@ -213,6 +242,17 @@ function setupRenderLayers() {
     20,
     "entities",
   );
+  renderSystem.addLayer(
+    () => {
+      if (!eventHandler) return;
+      const lasers = eventHandler.getLasers();
+      for (let i = 0; i < lasers.length; i++) {
+        lasers[i].render(ctx);
+      }
+    },
+    22,
+    "lasers",
+  );
   renderSystem.addLayer(() => powerUpManager.render(ctx), 25, "powerups");
   renderSystem.addLayer(() => particleSystem.render(ctx), 30, "particles");
   renderSystem.addLayer(() => screenEffects.render(ctx), 35, "effects");
@@ -233,7 +273,7 @@ function init() {
   if (!initCanvas()) return;
   initSystems();
 
-  const eventHandler = new GameEventHandler({
+  eventHandler = new GameEventHandler({
     stateManager,
     comboSystem,
     levelSystem,

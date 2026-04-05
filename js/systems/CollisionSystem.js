@@ -81,6 +81,7 @@ class CollisionSystem {
         hitPos: clampedHit,
         x: ball.x,
         y: ball.y,
+        ball,
       });
     }
   }
@@ -150,6 +151,7 @@ class CollisionSystem {
       ball.vy = -Math.abs(ball.vy);
       ball.y = this.shieldY - ball.radius;
       EventBus.emit("shield_hit", { x: ball.x });
+      EventBus.emit("shield_deactivated");
     }
   }
 

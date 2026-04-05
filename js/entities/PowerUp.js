@@ -156,5 +156,5 @@ class PowerUp {
   }
 }
 
-export { PowerUp, POWERUP_DURATION };
+export { PowerUp, POWERUP_DURATION, POWERUP_VISUALS };
 export default PowerUp;

@@ -1,5 +1,6 @@
 import EventBus from "./EventBus.js";
 import { STATES, GAME, CANVAS, PHYSICS } from "../config/constants.js";
+import Laser from "../entities/Laser.js";
 
 /**
  * GameEventHandler - 全ゲームイベントの購読と処理を一元管理
@@ -20,6 +21,10 @@ class GameEventHandler {
     this.startLevel = deps.startLevel;
     this.initAudio = deps.initAudio;
     this.audioInitialized = false;
+    this.stickyMode = false;
+    this.laserMode = false;
+    this.lasers = [];
+    this.lastLaserTime = 0;
   }
 
   /**
@@ -32,6 +37,8 @@ class GameEventHandler {
     this.setupGameplayEvents();
     this.setupLevelEvents();
     this.setupHighScoreEvents();
+    this.setupStickyPaddleEvents();
+    this.setupLaserEvents();
     this.setupAudioInit();
   }
 
@@ -183,6 +190,76 @@ class GameEventHandler {
         },
       });
     });
+  }
+
+  /**
+   * スティッキーパドル関連イベント
+   */
+  setupStickyPaddleEvents() {
+    EventBus.on("sticky_paddle_on", () => {
+      this.stickyMode = true;
+    });
+
+    EventBus.on("sticky_paddle_off", () => {
+      this.stickyMode = false;
+      const { balls } = this.getGameState();
+      for (let i = 0; i < balls.length; i++) {
+        if (balls[i].stuck) balls[i].launch();
+      }
+    });
+
+    EventBus.on("ball_paddle_hit", (data) => {
+      if (!this.stickyMode || !data.ball) return;
+      const { paddle } = this.getGameState();
+      if (!paddle) return;
+      data.ball.stickTo(paddle);
+    });
+
+    EventBus.on("input_action", () => {
+      if (!this.stateManager.isState(STATES.PLAYING)) return;
+      const { balls, paddle } = this.getGameState();
+      if (!paddle) return;
+      let launched = false;
+      for (let i = 0; i < balls.length; i++) {
+        if (balls[i].stuck) {
+          balls[i].launch();
+          launched = true;
+        }
+      }
+      if (launched) return;
+
+      // レーザーモード中: パドルからレーザーを発射
+      if (this.laserMode) {
+        const now = performance.now();
+        if (now - this.lastLaserTime >= 200) {
+          this.lastLaserTime = now;
+          const laserLeft = new Laser(paddle.x + paddle.width * 0.2, paddle.y);
+          const laserRight = new Laser(paddle.x + paddle.width * 0.8, paddle.y);
+          this.lasers.push(laserLeft, laserRight);
+        }
+      }
+    });
+  }
+
+  /**
+   * レーザー関連イベント
+   */
+  setupLaserEvents() {
+    EventBus.on("laser_on", () => {
+      this.laserMode = true;
+    });
+
+    EventBus.on("laser_off", () => {
+      this.laserMode = false;
+    });
+  }
+
+  /**
+   * レーザー配列を取得（main.js の update/render 用）
+   * @returns {Laser[]}
+   */
+  getLasers() {
+    return this.lasers;
   }
 
   /**

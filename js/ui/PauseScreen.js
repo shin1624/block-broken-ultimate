@@ -90,10 +90,59 @@ class PauseScreen {
       this.renderButton(ctx, this.buttons[i]);
     }
 
-    // ヒント
+    // 操作説明セクション
+    this.renderControls(ctx);
+
+    // ヒント（操作説明の下）
     ctx.fillStyle = COLORS.TEXT_SECONDARY;
     ctx.font = "12px monospace";
-    ctx.fillText("Press ESC to resume", CANVAS.WIDTH / 2, 420);
+    ctx.textAlign = "center";
+    ctx.fillText("Press ESC to resume", CANVAS.WIDTH / 2, 570);
+  }
+
+  /**
+   * 操作説明セクション描画
+   */
+  renderControls(ctx) {
+    const centerX = CANVAS.WIDTH / 2;
+    const startY = 430;
+
+    // セクションヘッダー
+    ctx.fillStyle = COLORS.ACCENT;
+    ctx.font = "bold 14px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("— CONTROLS —", centerX, startY);
+
+    // 操作一覧
+    const controls = [
+      { key: "← → / A D", desc: "Move Paddle" },
+      { key: "Mouse", desc: "Follow Cursor" },
+      { key: "Touch", desc: "Drag to Move" },
+      { key: "Space / Click", desc: "Launch Ball" },
+      { key: "ESC", desc: "Pause / Resume" },
+    ];
+
+    const colLeft = centerX - 100;
+    const colRight = centerX + 100;
+    const lineHeight = 22;
+    let y = startY + 28;
+
+    for (let i = 0; i < controls.length; i++) {
+      const row = controls[i];
+
+      ctx.fillStyle = COLORS.TEXT_PRIMARY;
+      ctx.font = "13px monospace";
+      ctx.textAlign = "left";
+      ctx.fillText(row.key, colLeft, y);
+
+      ctx.fillStyle = COLORS.TEXT_SECONDARY;
+      ctx.font = "13px monospace";
+      ctx.textAlign = "right";
+      ctx.fillText(row.desc, colRight, y);
+
+      y += lineHeight;
+    }
   }
 
   /**

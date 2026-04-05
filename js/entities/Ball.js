@@ -112,6 +112,39 @@ class Ball {
   }
 
   /**
+   * パドルに貼り付ける
+   * @param {Paddle} paddle
+   */
+  stickTo(paddle) {
+    this.stuck = true;
+    this.stuckOffset = this.x - paddle.x;
+    this.y = paddle.getTopY() - this.radius;
+    this.vx = 0;
+    this.vy = 0;
+  }
+
+  /**
+   * 貼り付き状態から発射
+   */
+  launch() {
+    if (!this.stuck) return;
+    this.stuck = false;
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.6;
+    this.vx = Math.cos(angle) * PHYSICS.BALL_SPEED;
+    this.vy = Math.sin(angle) * PHYSICS.BALL_SPEED;
+  }
+
+  /**
+   * 貼り付き中のパドル追従
+   * @param {Paddle} paddle
+   */
+  updateStuck(paddle) {
+    if (!this.stuck) return;
+    this.x = paddle.x + this.stuckOffset;
+    this.y = paddle.getTopY() - this.radius;
+  }
+
+  /**
    * Canvas に描画
    * @param {CanvasRenderingContext2D} ctx
    */
